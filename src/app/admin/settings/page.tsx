@@ -1,316 +1,446 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-// Mock settings data
-const mockSettings = {
+interface Settings {
   general: {
-    siteName: 'QR-less Admin',
-    siteDescription: 'Admin panel for QR-less payment and location services',
-    supportEmail: 'support@qrless.com',
-    timezone: 'Asia/Kolkata',
+    language: string;
+    timezone: string;
+    dateFormat: string;
+    darkMode: boolean;
+  };
+  notifications: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+    orderUpdates: boolean;
+    paymentAlerts: boolean;
+    securityAlerts: boolean;
+  };
+  security: {
+    twoFactorAuth: boolean;
+    sessionTimeout: number;
+    passwordExpiry: number;
+    loginAttempts: number;
+  };
+  payment: {
+    defaultCurrency: string;
+    autoWithdrawal: boolean;
+    minWithdrawalAmount: number;
+    paymentMethod: string;
+  };
+}
+
+const defaultSettings: Settings = {
+  general: {
+    language: 'English',
+    timezone: 'UTC',
+    dateFormat: 'MM/DD/YYYY',
+    darkMode: false,
   },
   notifications: {
-    emailNotifications: true,
-    pushNotifications: true,
-    smsNotifications: false,
-    dailyReports: true,
-    weeklyReports: true,
+    email: true,
+    push: true,
+    sms: false,
+    orderUpdates: true,
+    paymentAlerts: true,
+    securityAlerts: true,
   },
   security: {
-    twoFactorAuth: true,
-    sessionTimeout: '30',
-    passwordExpiry: '90',
-    ipWhitelist: '192.168.1.1, 192.168.1.2',
+    twoFactorAuth: false,
+    sessionTimeout: 30,
+    passwordExpiry: 90,
+    loginAttempts: 3,
   },
   payment: {
-    currency: 'INR',
-    minimumAmount: '10',
-    maximumAmount: '100000',
-    transactionFee: '2',
+    defaultCurrency: 'USD',
+    autoWithdrawal: false,
+    minWithdrawalAmount: 100,
+    paymentMethod: 'Bank Transfer',
   },
 };
 
+const languages = ['English', 'Spanish', 'French', 'German', 'Chinese'];
+const timezones = ['UTC', 'UTC+1', 'UTC+2', 'UTC+3', 'UTC-1', 'UTC-2', 'UTC-3'];
+const dateFormats = ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'];
+const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD'];
+const paymentMethods = ['Bank Transfer', 'PayPal', 'Credit Card', 'Crypto'];
+
 export default function Settings() {
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [activeTab, setActiveTab] = useState('general');
-  const [settings, setSettings] = useState(mockSettings);
-  const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleChange = (category: string, field: string, value: string | boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category as keyof typeof prev],
-        [field]: value
-      }
-    }));
-  };
+  useEffect(() => {
+    // Load settings from localStorage
+    const savedSettings = localStorage.getItem('userSettings');
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
+    }
+  }, []);
 
-  const showNotification = (message: string, type: string) => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
-  };
-
-  const handleSaveChanges = async () => {
+  const handleSave = () => {
     setIsSaving(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock validation
-      if (settings.general.siteName.trim() === '') {
-        throw new Error('Site name cannot be empty');
-      }
-      if (!settings.general.supportEmail.includes('@')) {
-        throw new Error('Invalid support email');
-      }
-      if (Number(settings.payment.minimumAmount) < 0) {
-        throw new Error('Minimum amount cannot be negative');
-      }
-      if (Number(settings.payment.maximumAmount) <= Number(settings.payment.minimumAmount)) {
-        throw new Error('Maximum amount must be greater than minimum amount');
-      }
-
-      showNotification('Settings saved successfully!', 'success');
-      // In a real application, you would save the settings to a backend here
-    } catch (error) {
-      showNotification(error instanceof Error ? error.message : 'Failed to save settings', 'error');
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
+      localStorage.setItem('userSettings', JSON.stringify(settings));
       setIsSaving(false);
-    }
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    }, 1000);
   };
 
-  const handleResetSettings = () => {
-    if (window.confirm('Are you sure you want to reset all settings to default?')) {
-      setSettings(mockSettings);
-      showNotification('Settings reset to default', 'success');
-    }
-  };
+  const renderGeneralSettings = () => (
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Language
+        </label>
+        <select
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.general.language}
+          onChange={(e) => setSettings({
+            ...settings,
+            general: { ...settings.general, language: e.target.value }
+          })}
+        >
+          {languages.map((lang) => (
+            <option key={lang} value={lang}>{lang}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Timezone
+        </label>
+        <select
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.general.timezone}
+          onChange={(e) => setSettings({
+            ...settings,
+            general: { ...settings.general, timezone: e.target.value }
+          })}
+        >
+          {timezones.map((tz) => (
+            <option key={tz} value={tz}>{tz}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Date Format
+        </label>
+        <select
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.general.dateFormat}
+          onChange={(e) => setSettings({
+            ...settings,
+            general: { ...settings.general, dateFormat: e.target.value }
+          })}
+        >
+          {dateFormats.map((format) => (
+            <option key={format} value={format}>{format}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="darkMode"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.general.darkMode}
+          onChange={(e) => setSettings({
+            ...settings,
+            general: { ...settings.general, darkMode: e.target.checked }
+          })}
+        />
+        <label htmlFor="darkMode" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Dark Mode
+        </label>
+      </div>
+    </div>
+  );
+
+  const renderNotificationSettings = () => (
+    <div className="space-y-6">
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="emailNotif"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.notifications.email}
+          onChange={(e) => setSettings({
+            ...settings,
+            notifications: { ...settings.notifications, email: e.target.checked }
+          })}
+        />
+        <label htmlFor="emailNotif" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Email Notifications
+        </label>
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="pushNotif"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.notifications.push}
+          onChange={(e) => setSettings({
+            ...settings,
+            notifications: { ...settings.notifications, push: e.target.checked }
+          })}
+        />
+        <label htmlFor="pushNotif" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Push Notifications
+        </label>
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="smsNotif"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.notifications.sms}
+          onChange={(e) => setSettings({
+            ...settings,
+            notifications: { ...settings.notifications, sms: e.target.checked }
+          })}
+        />
+        <label htmlFor="smsNotif" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          SMS Notifications
+        </label>
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="orderUpdates"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.notifications.orderUpdates}
+          onChange={(e) => setSettings({
+            ...settings,
+            notifications: { ...settings.notifications, orderUpdates: e.target.checked }
+          })}
+        />
+        <label htmlFor="orderUpdates" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Order Updates
+        </label>
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="paymentAlerts"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.notifications.paymentAlerts}
+          onChange={(e) => setSettings({
+            ...settings,
+            notifications: { ...settings.notifications, paymentAlerts: e.target.checked }
+          })}
+        />
+        <label htmlFor="paymentAlerts" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Payment Alerts
+        </label>
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="securityAlerts"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.notifications.securityAlerts}
+          onChange={(e) => setSettings({
+            ...settings,
+            notifications: { ...settings.notifications, securityAlerts: e.target.checked }
+          })}
+        />
+        <label htmlFor="securityAlerts" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Security Alerts
+        </label>
+      </div>
+    </div>
+  );
+
+  const renderSecuritySettings = () => (
+    <div className="space-y-6">
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="twoFactorAuth"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.security.twoFactorAuth}
+          onChange={(e) => setSettings({
+            ...settings,
+            security: { ...settings.security, twoFactorAuth: e.target.checked }
+          })}
+        />
+        <label htmlFor="twoFactorAuth" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Two-Factor Authentication
+        </label>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Session Timeout (minutes)
+        </label>
+        <input
+          type="number"
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.security.sessionTimeout}
+          onChange={(e) => setSettings({
+            ...settings,
+            security: { ...settings.security, sessionTimeout: parseInt(e.target.value) }
+          })}
+          min="5"
+          max="120"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Password Expiry (days)
+        </label>
+        <input
+          type="number"
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.security.passwordExpiry}
+          onChange={(e) => setSettings({
+            ...settings,
+            security: { ...settings.security, passwordExpiry: parseInt(e.target.value) }
+          })}
+          min="30"
+          max="365"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Max Login Attempts
+        </label>
+        <input
+          type="number"
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.security.loginAttempts}
+          onChange={(e) => setSettings({
+            ...settings,
+            security: { ...settings.security, loginAttempts: parseInt(e.target.value) }
+          })}
+          min="3"
+          max="10"
+        />
+      </div>
+    </div>
+  );
+
+  const renderPaymentSettings = () => (
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Default Currency
+        </label>
+        <select
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.payment.defaultCurrency}
+          onChange={(e) => setSettings({
+            ...settings,
+            payment: { ...settings.payment, defaultCurrency: e.target.value }
+          })}
+        >
+          {currencies.map((currency) => (
+            <option key={currency} value={currency}>{currency}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="autoWithdrawal"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          checked={settings.payment.autoWithdrawal}
+          onChange={(e) => setSettings({
+            ...settings,
+            payment: { ...settings.payment, autoWithdrawal: e.target.checked }
+          })}
+        />
+        <label htmlFor="autoWithdrawal" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          Automatic Withdrawal
+        </label>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Minimum Withdrawal Amount
+        </label>
+        <input
+          type="number"
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.payment.minWithdrawalAmount}
+          onChange={(e) => setSettings({
+            ...settings,
+            payment: { ...settings.payment, minWithdrawalAmount: parseInt(e.target.value) }
+          })}
+          min="10"
+          max="1000"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Payment Method
+        </label>
+        <select
+          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2 px-3"
+          value={settings.payment.paymentMethod}
+          onChange={(e) => setSettings({
+            ...settings,
+            payment: { ...settings.payment, paymentMethod: e.target.value }
+          })}
+        >
+          {paymentMethods.map((method) => (
+            <option key={method} value={method}>{method}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Notification */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-lg ${
-          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white`}>
-          {notification.message}
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Settings</h1>
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className={`px-4 py-2 rounded-md text-white ${
+            isSaving ? 'bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'
+          }`}
+        >
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+
+      {showSuccess && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
+          Settings saved successfully!
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Settings</h1>
-        <div className="space-x-4">
-          <button
-            onClick={handleResetSettings}
-            className="btn-secondary"
-          >
-            Reset to Default
-          </button>
-          <button
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            className={`btn-primary ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-
-      {/* Settings Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
-          {['general', 'notifications', 'security', 'payment'].map((tab) => (
-            <button
-              key={tab}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300'
-              }`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Settings Content */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        {activeTab === 'general' && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Site Name</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.general.siteName}
-                  onChange={(e) => handleChange('general', 'siteName', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Site Description</label>
-                <textarea
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  rows={3}
-                  value={settings.general.siteDescription}
-                  onChange={(e) => handleChange('general', 'siteDescription', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Support Email</label>
-                <input
-                  type="email"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.general.supportEmail}
-                  onChange={(e) => handleChange('general', 'supportEmail', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</label>
-                <select
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.general.timezone}
-                  onChange={(e) => handleChange('general', 'timezone', e.target.value)}
-                >
-                  <option value="Asia/Kolkata">Asia/Kolkata</option>
-                  <option value="UTC">UTC</option>
-                  <option value="America/New_York">America/New_York</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex -mb-px">
+            {['general', 'notifications', 'security', 'payment'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`py-4 px-6 text-sm font-medium ${
+                  activeTab === tab
+                    ? 'border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-        {activeTab === 'notifications' && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              {Object.entries(settings.notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {key.split(/(?=[A-Z])/).join(' ')}
-                  </label>
-                  <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                    <input
-                      type="checkbox"
-                      checked={value}
-                      onChange={(e) => handleChange('notifications', key, e.target.checked)}
-                      className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                    />
-                    <label className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'security' && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Two Factor Authentication</label>
-                <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                  <input
-                    type="checkbox"
-                    checked={settings.security.twoFactorAuth}
-                    onChange={(e) => handleChange('security', 'twoFactorAuth', e.target.checked)}
-                    className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                  />
-                  <label className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Session Timeout (minutes)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="1440"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.security.sessionTimeout}
-                  onChange={(e) => handleChange('security', 'sessionTimeout', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password Expiry (days)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="365"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.security.passwordExpiry}
-                  onChange={(e) => handleChange('security', 'passwordExpiry', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">IP Whitelist</label>
-                <textarea
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  rows={3}
-                  value={settings.security.ipWhitelist}
-                  onChange={(e) => handleChange('security', 'ipWhitelist', e.target.value)}
-                  placeholder="Enter IP addresses separated by commas"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'payment' && (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
-                <select
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.payment.currency}
-                  onChange={(e) => handleChange('payment', 'currency', e.target.value)}
-                >
-                  <option value="INR">Indian Rupee (INR)</option>
-                  <option value="USD">US Dollar (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Transaction Amount</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.payment.minimumAmount}
-                  onChange={(e) => handleChange('payment', 'minimumAmount', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Transaction Amount</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.payment.maximumAmount}
-                  onChange={(e) => handleChange('payment', 'maximumAmount', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Transaction Fee (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                  value={settings.payment.transactionFee}
-                  onChange={(e) => handleChange('payment', 'transactionFee', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="p-6">
+          {activeTab === 'general' && renderGeneralSettings()}
+          {activeTab === 'notifications' && renderNotificationSettings()}
+          {activeTab === 'security' && renderSecuritySettings()}
+          {activeTab === 'payment' && renderPaymentSettings()}
+        </div>
       </div>
     </div>
   );

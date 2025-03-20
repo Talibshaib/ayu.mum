@@ -1,377 +1,275 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Mock location data
 const mockLocations = [
   {
-    id: 'LOC-001',
-    name: 'City Mall',
-    type: 'Shopping',
-    address: '123 Main Street, City Center',
-    coordinates: { lat: 28.6139, lng: 77.2090 },
+    id: 1,
+    name: 'Downtown Branch',
+    type: 'Restaurant',
+    address: '123 Main St, Downtown',
     status: 'Active',
-    services: ['Parking', 'Food Court', 'Shopping'],
-    operatingHours: '10:00 AM - 10:00 PM',
-    capacity: 1000,
-    currentOccupancy: 450,
+    capacity: 100,
+    currentOccupancy: 65,
+    lastUpdated: '2024-02-20 14:30',
   },
   {
-    id: 'LOC-002',
-    name: 'Central Station',
-    type: 'Transport',
-    address: '456 Railway Road, Transit Hub',
-    coordinates: { lat: 28.6288, lng: 77.2089 },
+    id: 2,
+    name: 'Highway Toll Plaza',
+    type: 'Toll',
+    address: 'Highway 101, Mile 45',
     status: 'Active',
-    services: ['Parking', 'Food Stalls', 'Ticket Counter'],
-    operatingHours: '24/7',
-    capacity: 5000,
-    currentOccupancy: 2300,
+    capacity: 500,
+    currentOccupancy: 230,
+    lastUpdated: '2024-02-20 14:35',
   },
   {
-    id: 'LOC-003',
-    name: 'Tech Park',
+    id: 3,
+    name: 'City Mall Branch',
     type: 'Business',
-    address: '789 Tech Avenue, Business District',
-    coordinates: { lat: 28.6129, lng: 77.2295 },
+    address: '789 Shopping Ave, City Mall',
+    status: 'Maintenance',
+    capacity: 200,
+    currentOccupancy: 0,
+    lastUpdated: '2024-02-20 14:20',
+  },
+  {
+    id: 4,
+    name: 'Airport Terminal',
+    type: 'Taxi Stand',
+    address: 'International Airport, Terminal 3',
     status: 'Active',
-    services: ['Parking', 'Cafeteria', 'Conference Rooms'],
-    operatingHours: '8:00 AM - 8:00 PM',
-    capacity: 3000,
-    currentOccupancy: 1800,
+    capacity: 50,
+    currentOccupancy: 28,
+    lastUpdated: '2024-02-20 14:40',
   },
 ];
 
-const locationTypes = ['All', 'Shopping', 'Transport', 'Business', 'Restaurant', 'Entertainment'];
-const statusOptions = ['All', 'Active', 'Inactive', 'Maintenance'];
-
-interface Location {
-  id: string;
-  name: string;
-  type: string;
-  address: string;
-  coordinates: { lat: number; lng: number };
-  status: string;
-  services: string[];
-  operatingHours: string;
-  capacity: number;
-  currentOccupancy: number;
-}
-
-export default function LocationManagement() {
-  const [locations, setLocations] = useState<Location[]>(mockLocations);
-  const [selectedType, setSelectedType] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddLocation, setShowAddLocation] = useState(false);
-  const [showEditLocation, setShowEditLocation] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const [notification, setNotification] = useState({ show: false, message: '', type: '' });
-  const [showServiceModal, setShowServiceModal] = useState(false);
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
-
-  // Filter locations based on selected filters
-  const filteredLocations = locations.filter(location => {
-    if (selectedType !== 'All' && location.type !== selectedType) return false;
-    if (selectedStatus !== 'All' && location.status !== selectedStatus) return false;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        location.name.toLowerCase().includes(query) ||
-        location.address.toLowerCase().includes(query) ||
-        location.type.toLowerCase().includes(query)
-      );
-    }
-    return true;
+export default function LocationServices() {
+  const [locations, setLocations] = useState(mockLocations);
+  const [userType, setUserType] = useState<string>('');
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newLocation, setNewLocation] = useState({
+    name: '',
+    type: '',
+    address: '',
+    capacity: '',
   });
 
-  const showNotification = (message: string, type: string) => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
+  useEffect(() => {
+    const userJson = localStorage.getItem('currentUser');
+    if (userJson) {
+      const user = JSON.parse(userJson);
+      setUserType(user.type);
+      // Filter locations based on user type
+      setLocations(mockLocations.filter(loc => 
+        user.type === 'toll' ? true : loc.type.toLowerCase() === user.type
+      ));
+    }
+  }, []);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    const filtered = mockLocations.filter(location =>
+      location.name.toLowerCase().includes(term.toLowerCase()) ||
+      location.address.toLowerCase().includes(term.toLowerCase())
+    );
+    setLocations(filtered);
   };
 
-  const handleAddLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newLocation: Location = {
-        id: `LOC-${String(locations.length + 1).padStart(3, '0')}`,
-        name: 'New Location',
-        type: 'Shopping',
-        address: '',
-        coordinates: { lat: 0, lng: 0 },
-        status: 'Active',
-        services: [],
-        operatingHours: '9:00 AM - 9:00 PM',
-        capacity: 1000,
-        currentOccupancy: 0,
-      };
-      
-      setLocations([...locations, newLocation]);
-      showNotification('Location added successfully!', 'success');
-      setShowAddLocation(false);
-    } catch (error) {
-      showNotification('Failed to add location', 'error');
+  const handleFilterChange = (status: string) => {
+    setFilter(status);
+    if (status === 'all') {
+      setLocations(mockLocations);
+    } else {
+      setLocations(mockLocations.filter(loc => loc.status.toLowerCase() === status.toLowerCase()));
     }
   };
 
-  const handleUpdateLocation = async (location: Location) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedLocations = locations.map(loc => 
-        loc.id === location.id ? location : loc
-      );
-      setLocations(updatedLocations);
-      showNotification('Location updated successfully!', 'success');
-      setShowEditLocation(false);
-    } catch (error) {
-      showNotification('Failed to update location', 'error');
-    }
-  };
-
-  const handleDeleteLocation = async (locationId: string) => {
-    if (!window.confirm('Are you sure you want to delete this location?')) return;
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedLocations = locations.filter(loc => loc.id !== locationId);
-      setLocations(updatedLocations);
-      showNotification('Location deleted successfully!', 'success');
-    } catch (error) {
-      showNotification('Failed to delete location', 'error');
-    }
-  };
-
-  const handleToggleStatus = async (locationId: string) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedLocations = locations.map(location => {
-        if (location.id === locationId) {
-          return {
-            ...location,
-            status: location.status === 'Active' ? 'Inactive' : 'Active'
-          };
-        }
-        return location;
-      });
-      setLocations(updatedLocations);
-      showNotification('Location status updated successfully!', 'success');
-    } catch (error) {
-      showNotification('Failed to update location status', 'error');
-    }
-  };
-
-  const handleUpdateServices = async (locationId: string, services: string[]) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedLocations = locations.map(location => {
-        if (location.id === locationId) {
-          return {
-            ...location,
-            services
-          };
-        }
-        return location;
-      });
-      setLocations(updatedLocations);
-      showNotification('Services updated successfully!', 'success');
-      setShowServiceModal(false);
-    } catch (error) {
-      showNotification('Failed to update services', 'error');
-    }
-  };
-
-  const handleUpdateOccupancy = async (locationId: string, newOccupancy: number) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedLocations = locations.map(location => {
-        if (location.id === locationId) {
-          return {
-            ...location,
-            currentOccupancy: Math.min(Math.max(0, newOccupancy), location.capacity)
-          };
-        }
-        return location;
-      });
-      setLocations(updatedLocations);
-      showNotification('Occupancy updated successfully!', 'success');
-    } catch (error) {
-      showNotification('Failed to update occupancy', 'error');
-    }
+  const handleAddLocation = () => {
+    // Mock adding a new location
+    const newLoc = {
+      id: locations.length + 1,
+      ...newLocation,
+      status: 'Active',
+      currentOccupancy: 0,
+      lastUpdated: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      capacity: parseInt(newLocation.capacity),
+    };
+    setLocations([...locations, newLoc]);
+    setShowAddModal(false);
+    setNewLocation({ name: '', type: '', address: '', capacity: '' });
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Notification */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-lg ${
-          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white`}>
-          {notification.message}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Location Management</h1>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          Location Services
+        </h1>
         <button
-          onClick={() => setShowAddLocation(true)}
-          className="btn-primary"
+          onClick={() => setShowAddModal(true)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
         >
-          Add New Location
+          Add Location
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location Type</label>
-            <select
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-            >
-              {locationTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-            <select
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              {statusOptions.map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-            <input
-              type="text"
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-              placeholder="Search locations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      {/* Search and Filter */}
+      <div className="flex justify-between items-center space-x-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search locations..."
+            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+        </div>
+        <div className="space-x-2">
+          <button
+            onClick={() => handleFilterChange('all')}
+            className={`px-3 py-1 rounded ${
+              filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => handleFilterChange('active')}
+            className={`px-3 py-1 rounded ${
+              filter === 'active' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => handleFilterChange('maintenance')}
+            className={`px-3 py-1 rounded ${
+              filter === 'maintenance' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700'
+            }`}
+          >
+            Maintenance
+          </button>
         </div>
       </div>
 
       {/* Locations Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredLocations.map(location => (
-          <div key={location.id} className="bg-white dark:bg-gray-800 rounded-lg shadow">
-            <div className="p-6">
-              <div className="flex justify-between items-start">
+        {locations.map((location) => (
+          <div key={location.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex justify-between items-start">
+              <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">{location.name}</h3>
-                <button
-                  onClick={() => handleToggleStatus(location.id)}
-                  className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    location.status === 'Active'
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                  }`}
-                >
-                  {location.status}
-                </button>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{location.address}</p>
               </div>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{location.address}</p>
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Type:</span>
-                  <span className="text-gray-900 dark:text-white">{location.type}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Operating Hours:</span>
-                  <span className="text-gray-900 dark:text-white">{location.operatingHours}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Occupancy:</span>
-                  <span className="text-gray-900 dark:text-white">
-                    {location.currentOccupancy} / {location.capacity}
-                  </span>
-                </div>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                location.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {location.status}
+              </span>
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Type:</span>
+                <span className="text-gray-900 dark:text-white">{location.type}</span>
               </div>
-              <div className="mt-4">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Services:</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {location.services.map(service => (
-                    <span
-                      key={service}
-                      className="px-2 py-1 rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 text-xs"
-                    >
-                      {service}
-                    </span>
-                  ))}
-                </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Capacity:</span>
+                <span className="text-gray-900 dark:text-white">{location.capacity}</span>
               </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setSelectedLocation(location);
-                    setShowEditLocation(true);
-                  }}
-                  className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteLocation(location.id)}
-                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                >
-                  Delete
-                </button>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Current Occupancy:</span>
+                <span className="text-gray-900 dark:text-white">{location.currentOccupancy}</span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Last Updated:</span>
+                <span className="text-gray-900 dark:text-white">{location.lastUpdated}</span>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end space-x-2">
+              <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                Edit
+              </button>
+              <button className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
+                Delete
+              </button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Add/Edit Location Modal */}
-      {(showAddLocation || showEditLocation) && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              {showAddLocation ? 'Add New Location' : 'Edit Location'}
-            </h2>
-            {/* Add your form fields here */}
-            <div className="flex justify-end space-x-3 mt-6">
+      {/* Add Location Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Add New Location</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
+                  value={newLocation.name}
+                  onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type
+                </label>
+                <select
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
+                  value={newLocation.type}
+                  onChange={(e) => setNewLocation({ ...newLocation, type: e.target.value })}
+                >
+                  <option value="">Select Type</option>
+                  <option value="Restaurant">Restaurant</option>
+                  <option value="Toll">Toll</option>
+                  <option value="Business">Business</option>
+                  <option value="Taxi Stand">Taxi Stand</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
+                  value={newLocation.address}
+                  onChange={(e) => setNewLocation({ ...newLocation, address: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Capacity
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
+                  value={newLocation.capacity}
+                  onChange={(e) => setNewLocation({ ...newLocation, capacity: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
               <button
-                onClick={() => {
-                  setShowAddLocation(false);
-                  setShowEditLocation(false);
-                }}
-                className="btn-secondary"
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (showAddLocation) {
-                    handleAddLocation(new Event('submit') as any);
-                  } else if (selectedLocation) {
-                    handleUpdateLocation(selectedLocation);
-                  }
-                }}
-                className="btn-primary"
+                onClick={handleAddLocation}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
               >
-                {showAddLocation ? 'Add Location' : 'Update Location'}
+                Add Location
               </button>
             </div>
           </div>

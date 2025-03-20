@@ -1,238 +1,254 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Mock user data
 const mockUsers = [
-  { id: 'USR-001', name: 'John Doe', email: 'john@example.com', role: 'Admin', status: 'Active', lastLogin: '2 hours ago' },
-  { id: 'USR-002', name: 'Jane Smith', email: 'jane@example.com', role: 'Manager', status: 'Active', lastLogin: '1 day ago' },
-  { id: 'USR-003', name: 'Mike Johnson', email: 'mike@example.com', role: 'User', status: 'Inactive', lastLogin: '5 days ago' },
-  { id: 'USR-004', name: 'Sarah Wilson', email: 'sarah@example.com', role: 'Manager', status: 'Active', lastLogin: '3 hours ago' },
-  { id: 'USR-005', name: 'Tom Brown', email: 'tom@example.com', role: 'User', status: 'Active', lastLogin: '1 hour ago' },
+  {
+    id: 1,
+    name: 'John Smith',
+    email: 'john@example.com',
+    role: 'Admin',
+    type: 'Restaurant',
+    status: 'Active',
+    lastLogin: '2024-02-20 14:30',
+  },
+  {
+    id: 2,
+    name: 'Jane Doe',
+    email: 'jane@example.com',
+    role: 'Manager',
+    type: 'Toll',
+    status: 'Active',
+    lastLogin: '2024-02-20 13:45',
+  },
+  {
+    id: 3,
+    name: 'Mike Johnson',
+    email: 'mike@example.com',
+    role: 'Staff',
+    type: 'Business',
+    status: 'Inactive',
+    lastLogin: '2024-02-19 16:20',
+  },
+  {
+    id: 4,
+    name: 'Sarah Wilson',
+    email: 'sarah@example.com',
+    role: 'Manager',
+    type: 'Taxi',
+    status: 'Active',
+    lastLogin: '2024-02-20 11:15',
+  },
 ];
 
-const roleOptions = ['All', 'Admin', 'Manager', 'User'];
-const statusOptions = ['All', 'Active', 'Inactive'];
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  lastLogin: string;
-}
+const roles = ['Admin', 'Manager', 'Staff'];
+const types = ['Restaurant', 'Toll', 'Business', 'Taxi'];
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [selectedRole, setSelectedRole] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAddUser, setShowAddUser] = useState(false);
-  const [showEditUser, setShowEditUser] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'User' });
-  const [notification, setNotification] = useState({ show: false, message: '', type: '' });
-
-  // Filter users based on selected filters
-  const filteredUsers = users.filter(user => {
-    if (selectedRole !== 'All' && user.role !== selectedRole) {
-      return false;
-    }
-    if (selectedStatus !== 'All' && user.status !== selectedStatus) {
-      return false;
-    }
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        user.id.toLowerCase().includes(query)
-      );
-    }
-    return true;
+  const [users, setUsers] = useState(mockUsers);
+  const [userType, setUserType] = useState<string>('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: '',
+    type: '',
   });
 
-  const showNotification = (message: string, type: string) => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => setNotification({ show: false, message: '', type: '' }), 3000);
-  };
+  useEffect(() => {
+    const userJson = localStorage.getItem('currentUser');
+    if (userJson) {
+      const user = JSON.parse(userJson);
+      setUserType(user.type);
+      // Filter users based on user type
+      setUsers(mockUsers.filter(u => 
+        user.type === 'toll' ? true : u.type.toLowerCase() === user.type
+      ));
+    }
+  }, []);
 
-  const handleAddUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newId = `USR-${String(users.length + 1).padStart(3, '0')}`;
-    const userToAdd = {
-      ...newUser,
-      id: newId,
-      status: 'Active',
-      lastLogin: 'Never'
-    };
-    setUsers([...users, userToAdd]);
-    setNewUser({ name: '', email: '', role: 'User' });
-    setShowAddUser(false);
-    showNotification('User added successfully!', 'success');
-  };
-
-  const handleEditUser = (user: User) => {
-    setSelectedUser(user);
-    setShowEditUser(true);
-  };
-
-  const handleUpdateUser = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser) return;
-    
-    const updatedUsers = users.map(user => 
-      user.id === selectedUser.id ? selectedUser : user
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    const filtered = mockUsers.filter(user =>
+      user.name.toLowerCase().includes(term.toLowerCase()) ||
+      user.email.toLowerCase().includes(term.toLowerCase())
     );
-    setUsers(updatedUsers);
-    setShowEditUser(false);
-    showNotification('User updated successfully!', 'success');
+    setUsers(filtered);
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      const updatedUsers = users.filter(user => user.id !== userId);
-      setUsers(updatedUsers);
-      showNotification('User deleted successfully!', 'success');
+  const handleFilterChange = (status: string) => {
+    setFilter(status);
+    if (status === 'all') {
+      setUsers(mockUsers);
+    } else {
+      setUsers(mockUsers.filter(user => user.status.toLowerCase() === status.toLowerCase()));
     }
   };
 
-  const handleToggleStatus = (userId: string) => {
-    const updatedUsers = users.map(user => {
+  const handleAddUser = () => {
+    const user = {
+      id: users.length + 1,
+      ...newUser,
+      status: 'Active',
+      lastLogin: 'Never',
+    };
+    setUsers([...users, user]);
+    setShowAddModal(false);
+    setNewUser({ name: '', email: '', role: '', type: '' });
+  };
+
+  const handleEditUser = () => {
+    if (!selectedUser) return;
+    
+    setUsers(users.map(user => 
+      user.id === selectedUser.id ? selectedUser : user
+    ));
+    setShowEditModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleToggleStatus = (userId: number) => {
+    setUsers(users.map(user => {
       if (user.id === userId) {
         return {
           ...user,
-          status: user.status === 'Active' ? 'Inactive' : 'Active'
+          status: user.status === 'Active' ? 'Inactive' : 'Active',
         };
       }
       return user;
-    });
-    setUsers(updatedUsers);
-    showNotification('User status updated successfully!', 'success');
+    }));
   };
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Notification */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-lg ${
-          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        } text-white`}>
-          {notification.message}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">User Management</h1>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          User Management
+        </h1>
         <button
-          onClick={() => setShowAddUser(true)}
-          className="btn-primary"
+          onClick={() => setShowAddModal(true)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
         >
-          Add New User
+          Add User
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
-            <select
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-            >
-              {roleOptions.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-            <select
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              {statusOptions.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-            <input
-              type="text"
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      {/* Search and Filter */}
+      <div className="flex justify-between items-center space-x-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search users..."
+            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+            value={searchTerm}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
+        </div>
+        <div className="space-x-2">
+          <button
+            onClick={() => handleFilterChange('all')}
+            className={`px-3 py-1 rounded ${
+              filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => handleFilterChange('active')}
+            className={`px-3 py-1 rounded ${
+              filter === 'active' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700'
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => handleFilterChange('inactive')}
+            className={`px-3 py-1 rounded ${
+              filter === 'inactive' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700'
+            }`}
+          >
+            Inactive
+          </button>
         </div>
       </div>
 
       {/* Users Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Last Login</th>
-              <th scope="col" className="relative px-6 py-3">
-                <span className="sr-only">Actions</span>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Role
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Last Login
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Actions
               </th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredUsers.map((user) => (
+            {users.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
-                    </div>
-                  </div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    user.role === 'Admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                    user.role === 'Manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">{user.role}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">{user.type}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    {user.role}
+                    {user.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{user.lastLogin}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <button
-                    onClick={() => handleToggleStatus(user.id)}
-                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}
-                  >
-                    {user.status}
-                  </button>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                  {user.lastLogin}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button 
-                    onClick={() => handleEditUser(user)}
-                    className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4"
+                    onClick={() => {
+                      setSelectedUser(user);
+                      setShowEditModal(true);
+                    }}
+                    className="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400"
                   >
                     Edit
                   </button>
-                  <button 
-                    onClick={() => handleDeleteUser(user.id)}
-                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                  <button
+                    onClick={() => handleToggleStatus(user.id)}
+                    className={`${
+                      user.status === 'Active'
+                        ? 'text-red-600 hover:text-red-900'
+                        : 'text-green-600 hover:text-green-900'
+                    }`}
                   >
-                    Delete
+                    {user.status === 'Active' ? 'Deactivate' : 'Activate'}
                   </button>
                 </td>
               </tr>
@@ -242,111 +258,156 @@ export default function UserManagement() {
       </div>
 
       {/* Add User Modal */}
-      {showAddUser && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Add New User</h2>
-            <form onSubmit={handleAddUser} className="space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Name
+                </label>
                 <input
                   type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email
+                </label>
                 <input
                   type="email"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Role
+                </label>
                 <select
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
                   value={newUser.role}
                   onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                 >
-                  {roleOptions.filter(role => role !== 'All').map(role => (
+                  <option value="">Select Role</option>
+                  {roles.map((role) => (
                     <option key={role} value={role}>{role}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowAddUser(false)}
-                  className="btn-secondary"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type
+                </label>
+                <select
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
+                  value={newUser.type}
+                  onChange={(e) => setNewUser({ ...newUser, type: e.target.value })}
                 >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Add User
-                </button>
+                  <option value="">Select Type</option>
+                  {types.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
               </div>
-            </form>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddUser}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Add User
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Edit User Modal */}
-      {showEditUser && selectedUser && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+      {showEditModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Edit User</h2>
-            <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Name
+                </label>
                 <input
                   type="text"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
                   value={selectedUser.name}
                   onChange={(e) => setSelectedUser({ ...selectedUser, name: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email
+                </label>
                 <input
                   type="email"
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
                   value={selectedUser.email}
                   onChange={(e) => setSelectedUser({ ...selectedUser, email: e.target.value })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Role
+                </label>
                 <select
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800"
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
                   value={selectedUser.role}
                   onChange={(e) => setSelectedUser({ ...selectedUser, role: e.target.value })}
                 >
-                  {roleOptions.filter(role => role !== 'All').map(role => (
+                  {roles.map((role) => (
                     <option key={role} value={role}>{role}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowEditUser(false)}
-                  className="btn-secondary"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type
+                </label>
+                <select
+                  className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600"
+                  value={selectedUser.type}
+                  onChange={(e) => setSelectedUser({ ...selectedUser, type: e.target.value })}
                 >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Update User
-                </button>
+                  {types.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
               </div>
-            </form>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedUser(null);
+                }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditUser}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}
