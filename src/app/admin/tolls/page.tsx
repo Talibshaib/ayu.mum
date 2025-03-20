@@ -99,7 +99,12 @@ interface Toll {
   coordinates: { lat: number; lng: number };
   status: string;
   vehicleTypes: string[];
-  rates: Record<string, number>;
+  rates: {
+    Car: number;
+    Truck: number;
+    Bus: number;
+    Motorcycle?: number;
+  };
   todayCollection: number;
   todayVehicles: number;
   operatingHours: string;
